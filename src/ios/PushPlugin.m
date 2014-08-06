@@ -45,6 +45,7 @@
 
 - (void)register:(CDVInvokedUrlCommand*)command;
 {
+    NSLog(@"Start Registration");
 	self.callbackId = command.callbackId;
 
     NSMutableDictionary* options = [command.arguments objectAtIndex:0];
@@ -143,13 +144,14 @@
         [results setValue:dev.name forKey:@"deviceName"];
         [results setValue:dev.model forKey:@"deviceModel"];
         [results setValue:dev.systemVersion forKey:@"deviceSystemVersion"];
-
+        NSLog([NSString stringWithFormat:@"token -> %@", token]);
 		[self successWithMessage:[NSString stringWithFormat:@"%@", token]];
     #endif
 }
 
 - (void)didFailToRegisterForRemoteNotificationsWithError:(NSError *)error
 {
+     NSLog(@"Registration Failed");
 	[self failWithMessage:@"" withError:error];
 }
 
