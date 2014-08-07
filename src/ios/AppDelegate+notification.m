@@ -55,7 +55,7 @@ static char launchNotificationKey;
 - (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
     PushPlugin *pushHandler = [self getCommandInstance:@"PushPlugin"];
     [pushHandler didRegisterForRemoteNotificationsWithDeviceToken:deviceToken];
-    NSLog(@"didRegisterForRemoteNotificationsWithDeviceToken -> %@". deviceToken);
+    NSLog([NSString stringWithFormat:@"didRegisterForRemoteNotificationsWithDeviceToken token -> %@", token]);
 }
 
 - (void)application:(UIApplication *)application didFailToRegisterForRemoteNotificationsWithError:(NSError *)error {

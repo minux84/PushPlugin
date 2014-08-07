@@ -108,7 +108,10 @@
                        stringByReplacingOccurrencesOfString: @" " withString: @""];
     [results setValue:token forKey:@"deviceToken"];
     
+    NSLog(@"Entra nel metodo didRegister di pushPlugin per tutti");
+    
     #if !TARGET_IPHONE_SIMULATOR
+        NSLog(@"Entra nel metodo didRegister di pushPlugin sezione per devices");
         // Get Bundle Info for Remote Registration (handy if you have more than one app)
         [results setValue:[[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleDisplayName"] forKey:@"appName"];
         [results setValue:[[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleVersion"] forKey:@"appVersion"];
