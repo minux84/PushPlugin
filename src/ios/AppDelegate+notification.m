@@ -10,14 +10,11 @@
 #import "PushPlugin.h"
 #import <objc/runtime.h>
 
+#import "ApplicationManager.h"
+
 static char launchNotificationKey;
 
 @implementation AppDelegate (notification)
-
-- (id) getCommandInstance:(NSString*)className
-{
-	return [self.viewController getCommandInstance:className];
-}
 
 // its dangerous to override a method from within a category.
 // Instead we will use method swizzling. we set this up in the load call.
@@ -33,8 +30,8 @@ static char launchNotificationKey;
 - (AppDelegate *)swizzled_init
 {
 	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(createNotificationChecker:)
-               name:@"UIApplicationDidFinishLaunchingNotification" object:nil];
-	
+                                                 name:@"UIApplicationDidFinishLaunchingNotification" object:nil];
+    
 	// This actually calls the original init method over in AppDelegate. Equivilent to calling super
 	// on an overrided method, this is not recursive, although it appears that way. neat huh?
 	return [self swizzled_init];
@@ -53,14 +50,23 @@ static char launchNotificationKey;
 }
 
 - (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
-    PushPlugin *pushHandler = [self getCommandInstance:@"PushPlugin"];
-    [pushHandler didRegisterForRemoteNotificationsWithDeviceToken:deviceToken];
-    NSLog([NSString stringWithFormat:@"didRegisterForRemoteNotificationsWithDeviceToken token -> %@", deviceToken]);
+    ApplicationViewController *root = (ApplicationViewController*)[[ApplicationManager instance] currentRootViewController];
+    
+    for (WebViewController *controller in [root.allWebViewControllers allValues]) {
+        PushPlugin *pushHandler = [controller getCommandInstance:@"PushPlugin"];
+        [pushHandler didRegisterForRemoteNotificationsWithDeviceToken:deviceToken];
+        NSLog([NSString stringWithFormat:@"token -> %@", deviceToken]);
+    }
 }
 
 - (void)application:(UIApplication *)application didFailToRegisterForRemoteNotificationsWithError:(NSError *)error {
-    PushPlugin *pushHandler = [self getCommandInstance:@"PushPlugin"];
-    [pushHandler didFailToRegisterForRemoteNotificationsWithError:error];
+    ApplicationViewController *root = (ApplicationViewController*)[[ApplicationManager instance] currentRootViewController];
+    
+    for (WebViewController *controller in [root.allWebViewControllers allValues]) {
+        PushPlugin *pushHandler = [controller getCommandInstance:@"PushPlugin"];
+        NSLog([NSString stringWithFormat:@"error -> %@", error]);
+        [pushHandler didFailToRegisterForRemoteNotificationsWithError:error];
+    }
 }
 
 - (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo {
@@ -73,10 +79,14 @@ static char launchNotificationKey;
     }
     
     if (appState == UIApplicationStateActive) {
-        PushPlugin *pushHandler = [self getCommandInstance:@"PushPlugin"];
-        pushHandler.notificationMessage = userInfo;
-        pushHandler.isInline = YES;
-        [pushHandler notificationReceived];
+        ApplicationViewController *root = (ApplicationViewController*)[[ApplicationManager instance] currentRootViewController];
+        
+        for (WebViewController *controller in [root.allWebViewControllers allValues]) {
+            PushPlugin *pushHandler = [controller getCommandInstance:@"PushPlugin"];
+            pushHandler.notificationMessage = userInfo;
+            pushHandler.isInline = YES;
+            [pushHandler notificationReceived];
+        }
     } else {
         //save it for later
         self.launchNotification = userInfo;
@@ -89,13 +99,18 @@ static char launchNotificationKey;
     
     //zero badge
     application.applicationIconBadgeNumber = 0;
-
-    if (self.launchNotification) {
-        PushPlugin *pushHandler = [self getCommandInstance:@"PushPlugin"];
-		
-        pushHandler.notificationMessage = self.launchNotification;
-        self.launchNotification = nil;
-        [pushHandler performSelectorOnMainThread:@selector(notificationReceived) withObject:pushHandler waitUntilDone:NO];
+    
+    ApplicationViewController *root = (ApplicationViewController*)[[ApplicationManager instance] currentRootViewController];
+    
+    for (WebViewController *controller in [root.allWebViewControllers allValues]) {
+        
+        if (![controller.webView isLoading] && self.launchNotification) {
+            PushPlugin *pushHandler = [controller getCommandInstance:@"PushPlugin"];
+            
+            pushHandler.notificationMessage = self.launchNotification;
+            self.launchNotification = nil;
+            [pushHandler performSelectorOnMainThread:@selector(notificationReceived) withObject:pushHandler waitUntilDone:NO];
+        }
     }
 }
 
@@ -103,7 +118,7 @@ static char launchNotificationKey;
 // http://developer.apple.com/library/ios/#documentation/cocoa/conceptual/objectivec/Chapters/ocAssociativeReferences.html
 - (NSMutableArray *)launchNotification
 {
-   return objc_getAssociatedObject(self, &launchNotificationKey);
+    return objc_getAssociatedObject(self, &launchNotificationKey);
 }
 
 - (void)setLaunchNotification:(NSDictionary *)aDictionary
